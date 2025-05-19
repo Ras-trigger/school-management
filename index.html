@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>School Management System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+
+    header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    main {
+      padding: 2rem;
+    }
+
+    h2 {
+      color: #333;
+    }
+
+    form {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    input, button {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.6rem;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .delete-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    .edit-btn {
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.6rem;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+
+    .edit-btn:hover {
+      background-color: #0b7dda;
+    }
+
+    #login-section {
+      max-width: 400px;
+      margin: 5rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    #admin-portal, #student-records, #dashboard {
+      display: none;
+    }
+
+    #logout-btn {
+      margin-bottom: 1rem;
+      background-color: #f44336;
+    }
+
+    #logout-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    #search-input {
+      margin: 1rem 0;
+      padding: 0.5rem;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .student-link {
+      color: #2196F3;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Precious Child Academy School Management System</h1>
+  </header>
+
+  <main>
+    <!-- Login Section -->
+    <section id="login-section">
+      <h2>Admin Login</h2>
+      <form id="login-form">
+        <input type="text" id="username" placeholder="Username" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <button type="submit">Login</button>
+      </form>
+      <p id="login-error" style="color: red; display: none;">Invalid credentials!</p>
+    </section>
+
+    <!-- Admin Portal: Student Form -->
+    <section id="admin-portal">
+      <h2>Admin Portal</h2>
+      <button id="logout-btn">Logout</button>
+      <form id="student-form">
+        <input type="text" id="full-name" placeholder="Full Name" required />
+        <input type="text" id="year" placeholder="Year" required />
+        <input type="text" id="parent-name" placeholder="Parent Name" required />
+        <input type="text" id="parent-contact" placeholder="Parent Contact" required />
+        <input type="text" id="student-class" placeholder="Class" required />
+        <button type="submit">Add Student</button>
+        <button type="button" id="cancel-edit" style="display:none">Cancel</button>
+      </form>
+    </section>
+
+    <!-- Dashboard: Search -->
+    <section id="dashboard">
+      <h2>Main Dashboard</h2>
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Search student by name..."
+      />
+    </section>
+
+    <!-- Student Records Table -->
+    <section id="student-records">
+      <h2>Student Records</h2>
+      <button onclick="exportCSV()">Export as CSV</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Year</th>
+            <th>Parent Name</th>
+            <th>Parent Contact</th>
+            <th>Class</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="student-table-body"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("student-form");
+    const cancelEditBtn = document.getElementById("cancel-edit");
+    const tableBody = document.getElementById("student-table-body");
+
+    let editIndex = null;
+
+    // Load students from localStorage and display
+    function loadStudents() {
+      const students = JSON.parse(localStorage.getItem("students") || "[]");
+      displayStudents(students);
+    }
+
+    // Save students array to localStorage
+    function saveStudents(students) {
+      localStorage.setItem("students", JSON.stringify(students));
+    }
+
+    // Display students in the table
+    function displayStudents(students) {
+      tableBody.innerHTML = "";
+      students.forEach((student, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><span class="student-link" onclick="viewStudentDetails(${index})">${student.fullName}</span></td>
+          <td>${student.year}</td>
+          <td>${student.parentName}</td>
+          <td>${student.parentContact}</td>
+          <td>${student.studentClass}</td>
+          <td>
+            <button class="delete-btn" onclick="deleteStudent(${index})">Delete</button>
+            <button class="edit-btn" onclick="startEdit(${index})">Edit</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Delete a student record
+    function deleteStudent(index) {
+      const students = JSON.parse(localStorage.getItem("students") || "[]");
+      if(confirm("Are you sure you want to delete this student?")) {
+        students.splice(index, 1);
+        saveStudents(students);
+        displayStudents(students);
+      }
+    }
+
+    // Start editing a student record
+    function startEdit(index) {
+      const students = JSON.parse(localStorage.getItem("students") || "[]");
+      const student = students[index];
+      document.getElementById("full-name").value = student.fullName;
+      document.getElementById("year").value = student.year;
+      document.getElementById("parent-name").value = student.parentName;
+      document.getElementById("parent-contact").value = student.parentContact;
+      document.getElementById("student-class").value = student.studentClass;
+      form.querySelector('button[type="submit"]').textContent = "Update Student";
+      cancelEditBtn.style.display = "inline-block";
+      editIndex = index;
+    }
+
+    // Cancel editing
+    cancelEditBtn.addEventListener("click", () => {
+      form.reset();
+      editIndex = null;
+      form.querySelector('button[type="submit"]').textContent = "Add Student";
+      cancelEditBtn.style.display = "none";
+    });
+
+    // Add or update student on form submit
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const students = JSON.parse(localStorage.getItem("students") || "[]");
+      const student = {
+        fullName: document.getElementById("full-name").value.trim(),
+        year: document.getElementById("year").value.trim(),
+        parentName: document.getElementById("parent-name").value.trim(),
+        parentContact: document.getElementById("parent-contact").value.trim(),
+        studentClass: document.getElementById("student-class").value.trim(),
+      };
+      if(editIndex !== null){
+        students[editIndex] = student;
+        editIndex = null;
+        form.querySelector('button[type="submit"]').textContent = "Add Student";
+        cancelEditBtn.style.display = "none";
+      } else {
+        students.push(student);
+      }
+      saveStudents(students);
+      displayStudents(students);
+      form.reset();
+    });
+
+    // View student details in alert
+    function viewStudentDetails(index) {
+      const students = JSON.parse(localStorage.getItem("students") || "[]");
+      const student = students[index];
+      alert(
+        `Student Details:\n\nName: ${student.fullName}\nYear: ${student.year}\nParent: ${student.parentName}\nContact: ${student.parentContact}\nClass: ${student.studentClass}`
+      );
+    }
+
+    // Export student data as CSV file
+    function exportCSV() {
+      const rows = [
+        ["Full Name", "Year", "Parent Name", "Parent Contact", "Class"],
+        ...JSON.parse(localStorage.getItem("students") || "[]").map((s) => [
+          s.fullName,
+          s.year,
+          s.parentName,
+          s.parentContact,
+          s.studentClass,
+        ]),
+      ];
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        rows.map((e) => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "student_records.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Search functionality for students by name
+    document
+      .getElementById("search-input")
+      .addEventListener("input", function () {
+        const keyword = this.value.toLowerCase();
+        const students = JSON.parse(localStorage.getItem("students") || "[]");
+        const filtered = students.filter((student) =>
+          student.fullName.toLowerCase().includes(keyword)
+        );
+        displayStudents(filtered);
+      });
+
+    // Admin login with fixed credentials
+    document.getElementById("login-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if (username === "admin" && password === "admin123") {
+        document.getElementById("login-section").style.display = "none";
+        document.getElementById("admin-portal").style.display = "block";
+        document.getElementById("student-records").style.display = "block";
+        document.getElementById("dashboard").style.display = "block";
+        loadStudents();
+        document.getElementById("login-error").style.display = "none";
+      } else {
+        document.getElementById("login-error").style.display = "block";
+      }
+    });
+
+    // Logout functionality
+    document.getElementById("logout-btn").addEventListener("click", function () {
+      document.getElementById("admin-portal").style.display = "none";
+      document.getElementById("student-records").style.display = "none";
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("login-section").style.display = "block";
+      document.getElementById("login-form").reset();
+      form.reset();
+      editIndex = null;
+      form.querySelector('button[type="submit"]').textContent = "Add Student";
+      cancelEditBtn.style.display = "none";
+    });
+  </script>
+</body>
+</html>
